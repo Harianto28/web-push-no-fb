@@ -3,10 +3,9 @@ const webpush = require("web-push");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const bodyParser = require("body-parser");
-const fs = require("fs");
 
 const app = express();
-const PORT = 8090;
+const PORT = process.env.PORT || 8090;
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -17,32 +16,24 @@ db.run(
   `CREATE TABLE IF NOT EXISTS subscriptions (endpoint TEXT PRIMARY KEY, data TEXT)`
 );
 
-// VAPID keys
-const vapidKeysPath = "./vapid.json";
-let vapidKeys;
-if (fs.existsSync(vapidKeysPath)) {
-  vapidKeys = JSON.parse(fs.readFileSync(vapidKeysPath));
-} else {
-  vapidKeys = webpush.generateVAPIDKeys();
-  fs.writeFileSync(vapidKeysPath, JSON.stringify(vapidKeys));
+// VAPID from environment
+const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+const vapidEmail =
+  process.env.VAPID_EMAIL || "mailto:jeremytelegram11@gmail.com";
+
+if (!vapidPublicKey || !vapidPrivateKey) {
+  console.error("❌ Missing VAPID keys in environment variables.");
+  process.exit(1);
 }
 
-webpush.setVapidDetails(
-  "mailto:test@example.com",
-  vapidKeys.publicKey,
-  vapidKeys.privateKey
-);
-
-// Replace placeholder in main.js
-const mainJsPath = path.join(__dirname, "public", "main.js");
-let mainJs = fs.readFileSync(mainJsPath, "utf8");
-mainJs = mainJs.replace(
-  "<REPLACE_WITH_PUBLIC_KEY>",
-  JSON.stringify(vapidKeys.publicKey)
-);
-fs.writeFileSync(mainJsPath, mainJs);
+webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
 
 // Routes
+app.get("/vapid-public-key", (req, res) => {
+  res.json({ publicKey: vapidPublicKey });
+});
+
 app.post("/subscribe", (req, res) => {
   const sub = req.body;
   db.run(
@@ -67,5 +58,5 @@ app.post("/send", (req, res) => {
 });
 
 app.listen(PORT, () =>
-  console.log(`Server running on http://localhost:${PORT}`)
+  console.log(`✅ Server running on http://localhost:${PORT}`)
 );
