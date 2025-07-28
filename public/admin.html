@@ -1,29 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Admin Panel</title>
-</head>
-<body>
-  <h2>Send Push Notification</h2>
-  <form id="notify-form">
-    <input type="text" id="title" placeholder="Title" required><br><br>
-    <textarea id="body" placeholder="Message" required></textarea><br><br>
-    <button type="submit">Send</button>
-  </form>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Admin Panel</title>
+  </head>
+  <body>
+    <h2>Send Push Notification</h2>
+    <form id="notify-form">
+      <input type="text" id="title" placeholder="Title" required /><br /><br />
+      <textarea id="body" placeholder="Message" required></textarea><br /><br />
+      <input
+        type="url"
+        id="url"
+        placeholder="Optional URL (e.g., https://example.com)"
+      /><br /><br />
+      <button type="submit">Send</button>
+    </form>
 
-  <script>
-    document.getElementById('notify-form').onsubmit = async e => {
-      e.preventDefault();
-      const title = document.getElementById('title').value;
-      const body = document.getElementById('body').value;
-      await fetch('/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body })
-      });
-      alert('Notification sent!');
-    };
-  </script>
-</body>
+    <h3>Total Subscribers: <span id="sub-count">Loading...</span></h3>
+
+    <script>
+      // Handle send notification
+      document.getElementById("notify-form").onsubmit = async (e) => {
+        e.preventDefault();
+        const title = document.getElementById("title").value;
+        const body = document.getElementById("body").value;
+        const url = document.getElementById("url").value || "/"; // <- default fallback
+
+        await fetch("/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body, url }),
+        });
+
+        alert("Notification sent!");
+      };
+
+      // Fetch subscriber count
+      async function fetchSubscriberCount() {
+        try {
+          const res = await fetch("/count");
+          const data = await res.json();
+          document.getElementById("sub-count").textContent = data.count;
+        } catch (err) {
+          document.getElementById("sub-count").textContent = "Error";
+        }
+      }
+
+      fetchSubscriberCount();
+    </script>
+  </body>
 </html>
